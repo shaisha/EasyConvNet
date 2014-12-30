@@ -1,0 +1,201 @@
+
+<!DOCTYPE html
+  PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html><head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+   <!--
+This HTML was auto-generated from MATLAB code.
+To make changes, update the MATLAB code and republish this document.
+      --><title>a simple demonstration of the EasyConvNet code</title><meta name="generator" content="MATLAB 8.4"><link rel="schema.DC" href="http://purl.org/dc/elements/1.1/"><meta name="DC.date" content="2014-12-30"><meta name="DC.source" content="demoMNIST.m"><style type="text/css">
+html,body,div,span,applet,object,iframe,h1,h2,h3,h4,h5,h6,p,blockquote,pre,a,abbr,acronym,address,big,cite,code,del,dfn,em,font,img,ins,kbd,q,s,samp,small,strike,strong,sub,sup,tt,var,b,u,i,center,dl,dt,dd,ol,ul,li,fieldset,form,label,legend,table,caption,tbody,tfoot,thead,tr,th,td{margin:0;padding:0;border:0;outline:0;font-size:100%;vertical-align:baseline;background:transparent}body{line-height:1}ol,ul{list-style:none}blockquote,q{quotes:none}blockquote:before,blockquote:after,q:before,q:after{content:'';content:none}:focus{outine:0}ins{text-decoration:none}del{text-decoration:line-through}table{border-collapse:collapse;border-spacing:0}
+
+html { min-height:100%; margin-bottom:1px; }
+html body { height:100%; margin:0px; font-family:Arial, Helvetica, sans-serif; font-size:10px; color:#000; line-height:140%; background:#fff none; overflow-y:scroll; }
+html body td { vertical-align:top; text-align:left; }
+
+h1 { padding:0px; margin:0px 0px 25px; font-family:Arial, Helvetica, sans-serif; font-size:1.5em; color:#d55000; line-height:100%; font-weight:normal; }
+h2 { padding:0px; margin:0px 0px 8px; font-family:Arial, Helvetica, sans-serif; font-size:1.2em; color:#000; font-weight:bold; line-height:140%; border-bottom:1px solid #d6d4d4; display:block; }
+h3 { padding:0px; margin:0px 0px 5px; font-family:Arial, Helvetica, sans-serif; font-size:1.1em; color:#000; font-weight:bold; line-height:140%; }
+
+a { color:#005fce; text-decoration:none; }
+a:hover { color:#005fce; text-decoration:underline; }
+a:visited { color:#004aa0; text-decoration:none; }
+
+p { padding:0px; margin:0px 0px 20px; }
+img { padding:0px; margin:0px 0px 20px; border:none; }
+p img, pre img, tt img, li img, h1 img, h2 img { margin-bottom:0px; } 
+
+ul { padding:0px; margin:0px 0px 20px 23px; list-style:square; }
+ul li { padding:0px; margin:0px 0px 7px 0px; }
+ul li ul { padding:5px 0px 0px; margin:0px 0px 7px 23px; }
+ul li ol li { list-style:decimal; }
+ol { padding:0px; margin:0px 0px 20px 0px; list-style:decimal; }
+ol li { padding:0px; margin:0px 0px 7px 23px; list-style-type:decimal; }
+ol li ol { padding:5px 0px 0px; margin:0px 0px 7px 0px; }
+ol li ol li { list-style-type:lower-alpha; }
+ol li ul { padding-top:7px; }
+ol li ul li { list-style:square; }
+
+.content { font-size:1.2em; line-height:140%; padding: 20px; }
+
+pre, code { font-size:12px; }
+tt { font-size: 1.2em; }
+pre { margin:0px 0px 20px; }
+pre.codeinput { padding:10px; border:1px solid #d3d3d3; background:#f7f7f7; }
+pre.codeoutput { padding:10px 11px; margin:0px 0px 20px; color:#4c4c4c; }
+pre.error { color:red; }
+
+@media print { pre.codeinput, pre.codeoutput { word-wrap:break-word; width:100%; } }
+
+span.keyword { color:#0000FF }
+span.comment { color:#228B22 }
+span.string { color:#A020F0 }
+span.untermstring { color:#B20000 }
+span.syscmd { color:#B28C00 }
+
+.footer { width:auto; padding:10px 0px; margin:25px 0px 0px; border-top:1px dotted #878787; font-size:0.8em; line-height:140%; font-style:italic; color:#878787; text-align:left; float:none; }
+.footer p { margin:0px; }
+.footer a { color:#878787; }
+.footer a:hover { color:#878787; text-decoration:underline; }
+.footer a:visited { color:#878787; }
+
+table th { padding:7px 5px; text-align:left; vertical-align:middle; border: 1px solid #d6d4d4; font-weight:bold; }
+table td { padding:7px 5px; text-align:left; vertical-align:top; border:1px solid #d6d4d4; }
+
+
+
+
+
+  </style></head><body><div class="content"><h1>a simple demonstration of the EasyConvNet code</h1><!--introduction--><p>This code demonstrates the EasyConvNet package on the MNIST data set</p><!--/introduction--><h2>Contents</h2><div><ul><li><a href="#1">data preparation</a></li><li><a href="#2">Decide if you want GPU or CPU implementation</a></li><li><a href="#3">Define the architecture of a network (the LeNet architecture)</a></li><li><a href="#4">initialize a network class</a></li><li><a href="#5">For debugging purposes, show some images</a></li><li><a href="#6">Train using SGD with Nesterov's momentum</a></li><li><a href="#7">calculate test error</a></li></ul></div><h2>data preparation<a name="1"></a></h2><p>we need 4 files</p><pre class="codeinput">trainImages = <span class="string">'data/train.images.bin'</span>;
+trainLabels = <span class="string">'data/train.labels.bin'</span>;
+testImages = <span class="string">'data/test.images.bin'</span>;
+testLabels = <span class="string">'data/test.labels.bin'</span>;
+<span class="comment">% The format is as follows</span>
+<span class="comment">% Suppose X is a 4 dim matlab array with dimensions 28x28x1x60000,</span>
+<span class="comment">% where X(:,:,1,j) is the j'th image</span>
+<span class="comment">% Suppose that X are numbers between 0 and 255.</span>
+<span class="comment">% Then, create trainImages by</span>
+<span class="comment">%   fid = fopen(trainImages,'wb'); fwrite(fid,X(:),'uint8'); fclose(fid);</span>
+<span class="comment">% To create the label file, suppose we have k classes and let Y be a matrix</span>
+<span class="comment">% with Y(:,i) being all zeros vector except 1 in the position j, where j is</span>
+<span class="comment">% the correct label of example i. Then, create trainLabels by:</span>
+<span class="comment">%   fid = fopen(trainLabels,'wb'); fwrite(fid,Y(:),'ubit1'); fclose(fid);</span>
+</pre><h2>Decide if you want GPU or CPU implementation<a name="2"></a></h2><pre class="codeinput">atGPU = false; <span class="comment">% change this to true if you have a GPU and Matlab parallel toolbox</span>
+</pre><h2>Define the architecture of a network (the LeNet architecture)<a name="3"></a></h2><p>the architecture is a cell array of structs. Each layer is one struct. The first layer must be of 'type' input and the last layer must be of type 'loss' Each layer has fields 'inInd' and 'outInd'. These are indices to where the input of the layer comes from and where the output of the layer goes to.</p><pre class="codeinput">lenet = { <span class="keyword">...</span>
+    struct(<span class="string">'type'</span>,<span class="string">'input'</span>,<span class="string">'inInd'</span>,0,<span class="string">'outInd'</span>,1,<span class="string">'blobSize'</span>,[28 28 1 100],<span class="string">'fName'</span>,trainImages,<span class="string">'scale'</span>,1/256,<span class="string">'dataType'</span>,<span class="string">'uint8'</span>), <span class="keyword">...</span>
+    struct(<span class="string">'type'</span>,<span class="string">'input'</span>,<span class="string">'inInd'</span>,0,<span class="string">'outInd'</span>,2,<span class="string">'blobSize'</span>,[10 100],<span class="string">'fName'</span>,trainLabels,<span class="string">'scale'</span>,1,<span class="string">'dataType'</span>,<span class="string">'ubit1'</span>), <span class="keyword">...</span>
+    struct(<span class="string">'type'</span>,<span class="string">'conv'</span>,<span class="string">'inInd'</span>,1,<span class="string">'outInd'</span>,3,<span class="string">'kernelsize'</span>,5,<span class="string">'stride'</span>,1,<span class="string">'nOutChannels'</span>,20,<span class="string">'bias_filler'</span>,0),<span class="keyword">...</span>
+    struct(<span class="string">'type'</span>,<span class="string">'maxpool'</span>,<span class="string">'inInd'</span>,3,<span class="string">'outInd'</span>,4,<span class="string">'kernelsize'</span>,2,<span class="string">'stride'</span>,2), <span class="keyword">...</span>
+    struct(<span class="string">'type'</span>,<span class="string">'conv'</span>,<span class="string">'inInd'</span>,4,<span class="string">'outInd'</span>,5,<span class="string">'kernelsize'</span>,5,<span class="string">'stride'</span>,1,<span class="string">'nOutChannels'</span>,50,<span class="string">'bias_filler'</span>,0),<span class="keyword">...</span>
+    struct(<span class="string">'type'</span>,<span class="string">'maxpool'</span>,<span class="string">'inInd'</span>,5,<span class="string">'outInd'</span>,6,<span class="string">'kernelsize'</span>,2,<span class="string">'stride'</span>,2), <span class="keyword">...</span>
+    struct(<span class="string">'type'</span>,<span class="string">'flatten'</span>,<span class="string">'inInd'</span>,6,<span class="string">'outInd'</span>,6), <span class="keyword">...</span>
+    struct(<span class="string">'type'</span>,<span class="string">'affine'</span>,<span class="string">'inInd'</span>,6,<span class="string">'outInd'</span>,7,<span class="string">'nOutChannels'</span>,500,<span class="string">'bias_filler'</span>,0), <span class="keyword">...</span>
+    struct(<span class="string">'type'</span>,<span class="string">'relu'</span>,<span class="string">'inInd'</span>,7,<span class="string">'outInd'</span>,7),  <span class="keyword">...</span>
+    struct(<span class="string">'type'</span>,<span class="string">'affine'</span>,<span class="string">'inInd'</span>,7,<span class="string">'outInd'</span>,8,<span class="string">'nOutChannels'</span>,10,<span class="string">'bias_filler'</span>,0), <span class="keyword">...</span>
+    struct(<span class="string">'type'</span>,<span class="string">'loss'</span>,<span class="string">'inInd'</span>,[8 2],<span class="string">'outInd'</span>,10,<span class="string">'lossType'</span>,<span class="string">'MCLogLoss'</span>) };
+</pre><h2>initialize a network class<a name="4"></a></h2><pre class="codeinput">cnn = ConvNet(lenet,atGPU);
+</pre><h2>For debugging purposes, show some images<a name="5"></a></h2><pre class="codeinput">x = cnn.net{1}.data.get(1); y = cnn.net{2}.data.get(1); [~,bla] = max(y);
+figure; <span class="keyword">for</span> i=1:25, subplot(5,5,i); imagesc(squeeze(x(:,:,:,i))'); colormap <span class="string">gray</span>; axis <span class="string">off</span>; title(sprintf(<span class="string">'%d'</span>,bla(i)-1));  <span class="keyword">end</span>
+</pre><img vspace="5" hspace="5" src="demoMNIST_01.png" alt=""> <h2>Train using SGD with Nesterov's momentum<a name="6"></a></h2><p>mandatory fields</p><pre class="codeinput">T = 500; mu = single(0.9); printIter = 100; lam =  single(0.0005);
+learning_rate = @(t)(0.01*(1+0.0001*t)^(-0.75)); <span class="comment">% learning rate rule</span>
+<span class="comment">% optional fields</span>
+param.snapshotFile = <span class="string">'/tmp/snapshot'</span>; param.printIter = 100; param.printDecay = 0.9;
+<span class="comment">% call Nesterov</span>
+cnn.Nesterov(T,learning_rate,mu,lam,param);
+<span class="comment">% plot convergence</span>
+figure; plot(cnn.AllLoss'); title(<span class="string">'Nesterov'</span>); legend(<span class="string">'Train loss'</span>,<span class="string">'Train 0-1 error'</span>);
+</pre><pre class="codeoutput">Iter: 100: 0.539155 0.155343 
+Iter: 200: 0.248436 0.069815 
+Iter: 300: 0.180418 0.055339 
+Iter: 400: 0.162504 0.045102 
+Iter: 500: 0.124395 0.038260 
+</pre><img vspace="5" hspace="5" src="demoMNIST_02.png" alt=""> <h2>calculate test error<a name="7"></a></h2><pre class="codeinput">testlenet = lenet;
+testlenet{1}.fName = testImages;
+testlenet{2}.fName = testLabels;
+testNet = ConvNet(testlenet,atGPU);
+testNet.setTheta(cnn.theta);
+testNet.calcLossAndErr();
+fprintf(1,<span class="string">'Test loss= %f, Test accuracy = %f\n'</span>,testNet.Loss(1),1-testNet.Loss(2));
+</pre><pre class="codeoutput">Test loss= 0.099955, Test accuracy = 0.969900
+</pre><p class="footer"><br><a href="http://www.mathworks.com/products/matlab/">Published with MATLAB&reg; R2014b</a><br></p></div><!--
+##### SOURCE BEGIN #####
+%% a simple demonstration of the EasyConvNet code
+% This code demonstrates the EasyConvNet package on the MNIST data set
+% 
+
+%% data preparation
+% we need 4 files
+trainImages = 'data/train.images.bin';
+trainLabels = 'data/train.labels.bin';
+testImages = 'data/test.images.bin';
+testLabels = 'data/test.labels.bin';
+% The format is as follows
+% Suppose X is a 4 dim matlab array with dimensions 28x28x1x60000, 
+% where X(:,:,1,j) is the j'th image
+% Suppose that X are numbers between 0 and 255.
+% Then, create trainImages by
+%   fid = fopen(trainImages,'wb'); fwrite(fid,X(:),'uint8'); fclose(fid);
+% To create the label file, suppose we have k classes and let Y be a matrix
+% with Y(:,i) being all zeros vector except 1 in the position j, where j is
+% the correct label of example i. Then, create trainLabels by:
+%   fid = fopen(trainLabels,'wb'); fwrite(fid,Y(:),'ubit1'); fclose(fid);
+
+
+%% Decide if you want GPU or CPU implementation
+atGPU = false; % change this to true if you have a GPU and Matlab parallel toolbox
+
+%% Define the architecture of a network (the LeNet architecture)
+% the architecture is a cell array of structs. 
+% Each layer is one struct.
+% The first layer must be of 'type' input and the last layer must be of
+% type 'loss'
+% Each layer has fields 'inInd' and 'outInd'. These are indices to where
+% the input of the layer comes from and where the output of the layer goes
+% to.
+lenet = { ...
+    struct('type','input','inInd',0,'outInd',1,'blobSize',[28 28 1 100],'fName',trainImages,'scale',1/256,'dataType','uint8'), ...
+    struct('type','input','inInd',0,'outInd',2,'blobSize',[10 100],'fName',trainLabels,'scale',1,'dataType','ubit1'), ...
+    struct('type','conv','inInd',1,'outInd',3,'kernelsize',5,'stride',1,'nOutChannels',20,'bias_filler',0),...
+    struct('type','maxpool','inInd',3,'outInd',4,'kernelsize',2,'stride',2), ...
+    struct('type','conv','inInd',4,'outInd',5,'kernelsize',5,'stride',1,'nOutChannels',50,'bias_filler',0),...
+    struct('type','maxpool','inInd',5,'outInd',6,'kernelsize',2,'stride',2), ...
+    struct('type','flatten','inInd',6,'outInd',6), ...
+    struct('type','affine','inInd',6,'outInd',7,'nOutChannels',500,'bias_filler',0), ...
+    struct('type','relu','inInd',7,'outInd',7),  ...
+    struct('type','affine','inInd',7,'outInd',8,'nOutChannels',10,'bias_filler',0), ...
+    struct('type','loss','inInd',[8 2],'outInd',10,'lossType','MCLogLoss') };
+
+%% initialize a network class
+
+cnn = ConvNet(lenet,atGPU);
+
+%% For debugging purposes, show some images
+x = cnn.net{1}.data.get(1); y = cnn.net{2}.data.get(1); [~,bla] = max(y);
+figure; for i=1:25, subplot(5,5,i); imagesc(squeeze(x(:,:,:,i))'); colormap gray; axis off; title(sprintf('%d',bla(i)-1));  end
+
+
+%% Train using SGD with Nesterov's momentum
+% mandatory fields
+T = 500; mu = single(0.9); printIter = 100; lam =  single(0.0005); 
+learning_rate = @(t)(0.01*(1+0.0001*t)^(-0.75)); % learning rate rule
+% optional fields
+param.snapshotFile = '/tmp/snapshot'; param.printIter = 100; param.printDecay = 0.9;
+% call Nesterov
+cnn.Nesterov(T,learning_rate,mu,lam,param);
+% plot convergence
+figure; plot(cnn.AllLoss'); title('Nesterov'); legend('Train loss','Train 0-1 error');
+
+
+%% calculate test error
+
+testlenet = lenet;
+testlenet{1}.fName = testImages;
+testlenet{2}.fName = testLabels;
+testNet = ConvNet(testlenet,atGPU);
+testNet.setTheta(cnn.theta);
+testNet.calcLossAndErr();
+fprintf(1,'Test loss= %f, Test accuracy = %f\n',testNet.Loss(1),1-testNet.Loss(2));
+
+
+##### SOURCE END #####
+--></body></html>

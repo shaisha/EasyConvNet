@@ -22,8 +22,11 @@ classdef ConvNet < handle
     
     methods
         
-        function this = ConvNet(netD,atGPU)
+        function this = ConvNet(netD,atGPU,weightsInitialization)
             % Constructor. See demoMNIST for example
+            if nargin<3
+                weightsInitialization = 'Orthogonal';
+            end
             if atGPU
                 this.mygpuArray = @(x) gpuArray(x);
                 this.mygather = @(x) gather(x);
@@ -33,8 +36,17 @@ classdef ConvNet < handle
             end
             netD=this.add_reduced_conv_layers(netD);
             this.initializeNet(netD,atGPU);
+            this.initializeWeights(weightsInitialization);
             this.nLayers = length(this.net);
             this.delta = cell(size(this.O));
+            % make everything single and atGPU
+            this.theta = this.mygpuArray(single(this.theta));
+            for i=1:length(this.O)
+                if ~isempty(this.O{i})
+                    this.O{i} = this.mygpuArray(this.O{i});
+                end
+            end
+
         end
         
         % forward function
@@ -187,7 +199,7 @@ classdef ConvNet < handle
                 this.theta = this.theta + history;
                 
                 % choose mini batch
-                i = randi(m,1,1);
+                i = this.net{1}.data.nextRand();
                 % forward backward
                 this.forward(i);
                 this.backward(lam);
@@ -209,7 +221,7 @@ classdef ConvNet < handle
 
             for t=1:T
                 % choose mini batch
-                i = randi(m,1,1);
+                i = this.net{1}.data.nextRand();
                 % forward backward
                 this.forward(i);
                 this.backward(lam);
@@ -246,7 +258,7 @@ classdef ConvNet < handle
             
             for t=1:T
                 % choose mini batch
-                i = randi(m,1,1);
+                i = this.net{1}.data.nextRand();
                 galpha = this.mygpuArray(alpha(:,i));
                 % forward backward
                 this.forward(i);
@@ -380,7 +392,7 @@ classdef ConvNet < handle
                         
                         % then affine layer
                         nOut = netD{i}.nOutChannels;
-                        W = (rand(netD{i}.nOutChannels,blobDim(1))-0.5)/ sqrt(blobDim(1)) * sqrt(3);
+                        W = zeros(netD{i}.nOutChannels,blobDim(1));
                         Wind = length(this.theta)+(1:length(W(:)));
                         this.theta = [this.theta ; W(:)];
                         b = zeros(nOut,1) + netD{i}.bias_filler;
@@ -428,7 +440,7 @@ classdef ConvNet < handle
                         blobDim = size(this.O{inInd});
                         ncol = blobDim(2);
                         nrows = blobDim(1);
-                        W = (rand(netD{i}.nOutChannels,nrows)-0.5)/ sqrt(nrows) * sqrt(3);
+                        W = zeros(netD{i}.nOutChannels,nrows);
                         Wind = length(this.theta)+(1:length(W(:)));
                         this.theta = [this.theta ; W(:)];
                         b = zeros(netD{i}.nOutChannels,1) + netD{i}.bias_filler;
@@ -530,16 +542,7 @@ classdef ConvNet < handle
                         assert(false,'Unknown Layer type')
                 end
             end
-            
-            
-            % make everything single, atGPU, and allocate delta
-            this.theta = this.mygpuArray(single(this.theta));
-            for i=1:length(this.O)
-                if ~isempty(this.O{i})
-                    this.O{i} = this.mygpuArray(this.O{i});
-                end
-            end
-            
+                        
         end
         
         
@@ -672,6 +675,23 @@ classdef ConvNet < handle
             end
         end
 
+        
+        function initializeWeights(this,initMethod)
+            for i=1:length(this.net)
+                if strcmp(this.net{i}.type,'affine')
+                    switch initMethod
+                        case 'Orthogonal'
+                            [Q,~] = qr(randn(this.net{i}.Wshape)');
+                            W = Q(1:this.net{i}.Wshape(1),:);
+                        case 'Xavier'
+                            W = (rand(this.net{i}.Wshape)-0.5)/ sqrt(this.net{i}.Wshape(2)) * sqrt(3);
+                        otherwise
+                            fprintf(1,'Unknown initalization method %s\n',initMethod);
+                    end
+                    this.theta(this.net{i}.Ws:this.net{i}.We) = W(:);
+                end
+            end
+        end
         
     end
     

@@ -46,7 +46,7 @@ lenet = { ...
 
 %% initialize a network class
 
-cnn = ConvNet(lenet,atGPU);
+cnn = ConvNet(lenet,atGPU,'Orthogonal');
 
 %% For debugging purposes, show some images
 x = cnn.net{1}.data.get(1); y = cnn.net{2}.data.get(1); [~,bla] = max(y);
@@ -55,7 +55,7 @@ figure; for i=1:25, subplot(5,5,i); imagesc(squeeze(x(:,:,:,i))'); colormap gray
 
 %% Train using SGD with Nesterov's momentum
 % mandatory fields
-T = 500; mu = single(0.9); printIter = 100; lam =  single(0.0005); 
+T = 1000; mu = single(0.9); printIter = 100; lam =  single(0.0005); 
 learning_rate = @(t)(0.01*(1+0.0001*t)^(-0.75)); % learning rate rule
 % optional fields
 param.snapshotFile = '/tmp/snapshot'; param.printIter = 100; param.printDecay = 0.9;

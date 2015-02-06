@@ -10,6 +10,7 @@ classdef ConvNet < handle
         lossInd;
         Loss;
         AllLoss;
+        AvgTheta;
     end
     properties (SetAccess = private, GetAccess = private)
         mygpuArray;
@@ -210,7 +211,7 @@ classdef ConvNet < handle
                 history = history - eta*this.dtheta;
                 
                 % statistics for printing and snapshot
-                this.statAndSnapshot(t);
+                this.statAndSnapshot(t,lam);
             end
         end
         
@@ -225,19 +226,24 @@ classdef ConvNet < handle
                 % forward backward
                 this.forward(i);
                 this.backward(lam);
-                
-                % update
+                                
+                % learning rate
                 eta = learningRate(t);
+                if param.normalizedGradient
+                    eta = eta / norm(this.dtheta); 
+                end
+
+                % update
                 this.theta = this.theta - eta*this.dtheta;
                 
                 % statistics for printing and snapshot
-                this.statAndSnapshot(t);
+                this.statAndSnapshot(t,lam);
                 
             end
         end
         
         
-        function SDCA(this,alpha,T,eta,lam,param)
+        function alpha=SDCA(this,alpha,T,eta,lam,param)
             % SDCA solver
             
             this.prepareForStatAndSnapshot(T,param);
@@ -253,8 +259,8 @@ classdef ConvNet < handle
                 n = m;
                 alpha = randn(d,n,'single')*lam;
             end
-            this.theta = this.mygpuArray(single(mean(alpha,2)/lam));
             beta = eta*lam*n;
+            this.theta = this.mygpuArray(single(mean(alpha,2)/lam));
             
             for t=1:T
                 % choose mini batch
@@ -271,7 +277,7 @@ classdef ConvNet < handle
                 alpha(:,i) = this.mygather(galpha);
                 
                 % statistics for printing and snapshot
-                this.statAndSnapshot(t);
+                this.statAndSnapshot(t,lam);
             end
         end
         
@@ -289,6 +295,24 @@ classdef ConvNet < handle
             this.theta = this.mygpuArray(newtheta);
         end
         
+        
+        function initializeWeights(this,initMethod)
+            for i=1:length(this.net)
+                if strcmp(this.net{i}.type,'affine')
+                    switch initMethod
+                        case 'Orthogonal'
+                            [Q,~] = qr(randn(this.net{i}.Wshape)');
+                            W = Q(1:this.net{i}.Wshape(1),:);
+                        case 'Xavier'
+                            W = (rand(this.net{i}.Wshape)-0.5)/ sqrt(this.net{i}.Wshape(2)) * sqrt(3);
+                        otherwise
+                            fprintf(1,'Unknown initalization method %s\n',initMethod);
+                    end
+                    this.theta(this.net{i}.Ws:this.net{i}.We) = this.mygpuArray(W(:));
+                end
+            end
+        end
+
         
     end
     
@@ -660,39 +684,23 @@ classdef ConvNet < handle
             end
             this.Loss=this.O{this.lossInd}-this.O{this.lossInd};
             this.AllLoss=repmat(this.Loss,1,floor(T/this.printIter));
+            this.AvgTheta = this.theta;
         end
         
-        function statAndSnapshot(this,t)
+        function statAndSnapshot(this,t,lam)
             this.Loss = this.printDecay * this.Loss + (1-this.printDecay)*this.O{this.lossInd};
+            this.AvgTheta = this.printDecay * this.AvgTheta + (1-this.printDecay)*this.theta;
             if (rem(t,this.printIter)==0)
-                this.AllLoss(:,t/this.printIter) = this.Loss;
+                this.AllLoss(:,t/this.printIter) = this.Loss + 0.5*lam*norm(this.theta)^2;
                 fprintf(1,'Iter: %d: ',t); for i=1:length(this.Loss), fprintf(1,'%f ',this.Loss(i)); end; fprintf(1,'\n');
                 if ~isempty(this.snapshotFile)
                     fid = fopen(sprintf('%s.%.7d.bin',this.snapshotFile,t),'wb');
-                    fwrite(fid,this.mygather(this.theta),'single');
+                    fwrite(fid,this.mygather(this.AvgTheta),'single');
                     fclose(fid);
                 end
             end
         end
 
-        
-        function initializeWeights(this,initMethod)
-            for i=1:length(this.net)
-                if strcmp(this.net{i}.type,'affine')
-                    switch initMethod
-                        case 'Orthogonal'
-                            [Q,~] = qr(randn(this.net{i}.Wshape)');
-                            W = Q(1:this.net{i}.Wshape(1),:);
-                        case 'Xavier'
-                            W = (rand(this.net{i}.Wshape)-0.5)/ sqrt(this.net{i}.Wshape(2)) * sqrt(3);
-                        otherwise
-                            fprintf(1,'Unknown initalization method %s\n',initMethod);
-                    end
-                    this.theta(this.net{i}.Ws:this.net{i}.We) = W(:);
-                end
-            end
-        end
-        
     end
     
 end

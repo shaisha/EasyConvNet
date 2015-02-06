@@ -17,7 +17,7 @@ testLabels = 'data/test.labels.bin';
 % To create the label file, suppose we have k classes and let Y be a matrix
 % with Y(:,i) being all zeros vector except 1 in the position j, where j is
 % the correct label of example i. Then, create trainLabels by:
-%   fid = fopen(trainLabels,'wb'); fwrite(fid,Y(:),'ubit1'); fclose(fid);
+%   fid = fopen(trainLabels,'wb'); fwrite(fid,Y(:),'uint8'); fclose(fid);
 
 
 %% Decide if you want GPU or CPU implementation
@@ -71,7 +71,7 @@ testlenet = lenet;
 testlenet{1}.fName = testImages;
 testlenet{2}.fName = testLabels;
 testNet = ConvNet(testlenet,atGPU);
-testNet.setTheta(cnn.theta);
+testNet.setTheta(cnn.AvgTheta);
 testNet.calcLossAndErr();
 fprintf(1,'Test loss= %f, Test accuracy = %f\n',testNet.Loss(1),1-testNet.Loss(2));
 

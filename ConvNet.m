@@ -217,6 +217,9 @@ classdef ConvNet < handle
         
         function SGD(this,T,learningRate,lam,param)
             % vanilla SGD
+            if ~isfield(param,'normalizedGradient')
+                param.normalizedGradient = false;
+            end
             this.prepareForStatAndSnapshot(T,param);
             m = this.net{1}.data.m;
 
@@ -691,7 +694,8 @@ classdef ConvNet < handle
             this.Loss = this.printDecay * this.Loss + (1-this.printDecay)*this.O{this.lossInd};
             this.AvgTheta = this.printDecay * this.AvgTheta + (1-this.printDecay)*this.theta;
             if (rem(t,this.printIter)==0)
-                this.AllLoss(:,t/this.printIter) = this.Loss + 0.5*lam*norm(this.theta)^2;
+                %this.AllLoss(:,t/this.printIter) = this.Loss + 0.5*lam*norm(this.theta)^2;
+                this.AllLoss(:,t/this.printIter) = this.Loss;
                 fprintf(1,'Iter: %d: ',t); for i=1:length(this.Loss), fprintf(1,'%f ',this.Loss(i)); end; fprintf(1,'\n');
                 if ~isempty(this.snapshotFile)
                     fid = fopen(sprintf('%s.%.7d.bin',this.snapshotFile,t),'wb');
